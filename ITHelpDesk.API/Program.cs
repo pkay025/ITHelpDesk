@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 if (builder.Environment.IsDevelopment())
 {
-    builder.Services.AddDbContext<HelpDeskDbContext>(options => options.UseInMemoryDatabase("ITHelpDesk"));
+    builder.Services.AddDbContext<HelpDeskDbContext>(options => options.UseSqlite("Data Source=helpdesk.db"));
 }
 else
 {
