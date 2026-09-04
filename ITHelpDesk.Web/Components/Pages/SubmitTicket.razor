@@ -1,0 +1,84 @@
+@page "/submit-ticket"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Submit Ticket</PageTitle>
+
+<div class="form-shell">
+    <p class="eyebrow">REQUEST SUPPORT</p>
+    <h1>Tell us what is going wrong</h1>
+    <p class="lead">Give the IT team enough detail to start helping quickly.</p>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="alert alert-success">@message</div>
+    }
+
+    <EditForm Model="request" OnValidSubmit="SubmitAsync" class="panel ticket-form">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-grid">
+            <div class="form-field"><label for="title">Issue title</label>
+                <InputText id="title" @bind-Value="request.Title" />
+                <ValidationMessage For="@(() => request.Title)" />
+            </div>
+            <div class="form-field"><label for="priority">Priority</label>
+                <InputSelect id="priority" @bind-Value="request.Priority">
+                    <option value="@TicketPriority.Low">Low</option>
+                    <option value="@TicketPriority.Medium">Medium</option>
+                    <option value="@TicketPriority.High">High</option>
+                    <option value="@TicketPriority.Critical">Critical</option>
+                </InputSelect>
+            </div>
+            <div class="form-field"><label for="name">Your name</label>
+                <InputText id="name" @bind-Value="request.RequesterName" />
+                <ValidationMessage For="@(() => request.RequesterName)" />
+            </div>
+            <div class="form-field"><label for="email">Email address</label>
+                <InputText id="email" type="email" @bind-Value="request.RequesterEmail" />
+                <ValidationMessage For="@(() => request.RequesterEmail)" />
+            </div>
+            <div class="form-field full-width"><label for="description">Describe the issue</label>
+                <InputTextArea id="description" rows="7" @bind-Value="request.Description" />
+                <ValidationMessage For="@(() => request.Description)" />
+            </div>
+        </div>
+        <button class="btn btn-primary" type="submit" disabled="@isSubmitting">@(isSubmitting ? "Submitting..." :
+                 "Submit request")</button>
+        </EditForm>
+    </div>
+
+@code {
+    private CreateTicketRequest request = new();
+    private bool isSubmitting;
+    private string? message;
+
+    private async Task SubmitAsync()
+    {
+        isSubmitting = true;
+        message = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("HelpDeskApi");
+            var response = await client.PostAsJsonAsync("api/tickets", request);
+            if (response.IsSuccessStatusCode)
+            {
+                var ticket = await response.Content.ReadFromJsonAsync<Ticket>();
+                message = $"Ticket #{ticket?.Id} submitted successfully.";
+                request = new();
+            }
+            else
+            {
+                message = "The ticket could not be submitted. Please try again.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            message = "The API is unavailable. Start the API project and try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

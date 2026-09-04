@@ -3,6 +3,8 @@ using ITHelpDesk.Web.Components;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddHttpClient("HelpDeskApi", client =>
+    client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5200"));
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 

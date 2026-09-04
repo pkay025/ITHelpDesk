@@ -1,0 +1,91 @@
+@page "/staff-queue"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Staff Queue</PageTitle>
+
+<div class="dashboard-shell">
+    <div class="dashboard-heading">
+        <div>
+            <p class="eyebrow">IT SUPPORT PORTAL</p>
+            <h1>Staff queue</h1>
+            <p class="lead">Prioritize requests, assign ownership, and keep people informed.</p>
+        </div><button class="btn btn-outline-primary" @onclick="LoadTicketsAsync">Refresh queue</button>
+    </div>
+
+    @if (tickets is null)
+    {
+        <p class="status-message">Loading queue...</p>
+    }
+    else if (tickets.Count == 0)
+    {
+        <section class="panel empty-state">The queue is clear.</section>
+    }
+    else
+    {
+        <section class="panel queue-panel">
+            @foreach (var ticket in tickets)
+            {
+                <div class="queue-row">
+                    <div class="queue-main"><span class="ticket-id">#@ticket.Id</span>
+                        <div><strong>@ticket.Title</strong><small>@ticket.RequesterName · @ticket.RequesterEmail</small>
+                            <p>@ticket.Description</p>
+                        </div>
+                    </div>
+                    <div class="queue-controls"><select @bind="ticket.Status">
+                        <option value="@TicketStatus.Open">Open</option>
+                        <option value="@TicketStatus.Assigned">Assigned</option>
+                        <option value="@TicketStatus.InProgress">In progress</option>
+                        <option value="@TicketStatus.Resolved">Resolved</option>
+                        <option value="@TicketStatus.Closed">Closed</option>
+                    </select><select @bind="ticket.Priority">
+                    <option value="@TicketPriority.Low">Low</option>
+                    <option value="@TicketPriority.Medium">Medium</option>
+                    <option value="@TicketPriority.High">High</option>
+                    <option value="@TicketPriority.Critical">Critical</option>
+                </select><input placeholder="Assign to" @bind="ticket.AssignedTo" /><button
+                class="btn btn-sm btn-primary" @onclick="() => UpdateTicketAsync(ticket)">Save</button></div>
+            </div>
+        }
+    </section>
+}
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert alert-info">@message</div>
+}
+</div>
+
+@code {
+    private List<Ticket>? tickets;
+    private string? message;
+
+    protected override Task OnInitializedAsync() => LoadTicketsAsync();
+
+    private async Task LoadTicketsAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("HelpDeskApi");
+            tickets = await client.GetFromJsonAsync<List<Ticket>>("api/tickets") ?? [];
+            message = null;
+        }
+        catch (HttpRequestException)
+        {
+            tickets = [];
+            message = "The API is unavailable. Start the API project and try again.";
+        }
+    }
+
+    private async Task UpdateTicketAsync(Ticket ticket)
+    {
+        var client = HttpClientFactory.CreateClient("HelpDeskApi");
+        var response = await client.PatchAsJsonAsync($"api/tickets/{ticket.Id}", new UpdateTicketRequest
+        {
+            Status =
+ticket.Status,
+            Priority = ticket.Priority,
+            AssignedTo = ticket.AssignedTo
+        });
+        message = response.IsSuccessStatusCode ? $"Ticket #{ticket.Id} updated." : "The ticket could not be updated.";
+    }
+}
