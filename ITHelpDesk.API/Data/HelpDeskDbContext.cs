@@ -1,9 +1,10 @@
 using ITHelpDesk.Core.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ITHelpDesk.API.Data;
 
-public class HelpDeskDbContext(DbContextOptions<HelpDeskDbContext> options) : DbContext(options)
+public class HelpDeskDbContext(DbContextOptions<HelpDeskDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Ticket> Tickets => Set<Ticket>();
 
