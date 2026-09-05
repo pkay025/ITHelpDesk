@@ -10,6 +10,8 @@ public class HelpDeskDbContext(DbContextOptions<HelpDeskDbContext> options) : Id
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<Ticket>(entity =>
         {
             entity.Property(ticket => ticket.Title).HasMaxLength(120).IsRequired();
