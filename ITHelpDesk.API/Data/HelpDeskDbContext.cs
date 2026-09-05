@@ -1,17 +1,14 @@
 using ITHelpDesk.Core.Entities;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ITHelpDesk.API.Data;
 
-public class HelpDeskDbContext(DbContextOptions<HelpDeskDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+public class HelpDeskDbContext(DbContextOptions<HelpDeskDbContext> options) : DbContext(options)
 {
     public DbSet<Ticket> Tickets => Set<Ticket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
-
         modelBuilder.Entity<Ticket>(entity =>
         {
             entity.Property(ticket => ticket.Title).HasMaxLength(120).IsRequired();

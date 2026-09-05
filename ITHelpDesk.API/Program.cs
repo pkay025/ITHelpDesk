@@ -19,10 +19,13 @@ builder.Services.AddOpenApi();
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDbContext<HelpDeskDbContext>(options => options.UseSqlite("Data Source=helpdesk.db"));
+    builder.Services.AddDbContext<AuthDbContext>(options => options.UseSqlite("Data Source=auth.db"));
 }
 else
 {
     builder.Services.AddDbContext<HelpDeskDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("HelpDesk")));
+    builder.Services.AddDbContext<AuthDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("HelpDesk")));
 }
 
@@ -34,7 +37,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     options.User.RequireUniqueEmail = true;
 })
 .AddRoles<IdentityRole>()
-.AddEntityFrameworkStores<HelpDeskDbContext>()
+.AddEntityFrameworkStores<AuthDbContext>()
 .AddSignInManager();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ??
@@ -61,6 +64,8 @@ using (var scope = app.Services.CreateScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<HelpDeskDbContext>();
     database.Database.EnsureCreated();
+    var authDatabase = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    authDatabase.Database.EnsureCreated();
 }
 
 // Configure the HTTP request pipeline.
