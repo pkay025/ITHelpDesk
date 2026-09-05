@@ -17,11 +17,19 @@
         <p class="lead">@ticket.Description</p>
 
         <section class="panel">
-            <div class="ticket-row"><div><strong>Requester</strong><small>@ticket.RequesterName · @ticket.RequesterEmail</small></div><span class="status-pill status-@ticket.Status.ToString().ToLowerInvariant()">@ticket.Status</span></div>
+            <div class="ticket-row">
+                <div><strong>Requester</strong><small>@ticket.RequesterName · @ticket.RequesterEmail</small></div><span
+                class="status-pill status-@ticket.Status.ToString().ToLowerInvariant()">@ticket.Status</span>
+            </div>
         </section>
 
         <section class="panel comments-panel">
-            <div class="panel-heading"><div><p class="eyebrow">ACTIVITY</p><h2>Conversation</h2></div></div>
+            <div class="panel-heading">
+                <div>
+                    <p class="eyebrow">ACTIVITY</p>
+                    <h2>Conversation</h2>
+                </div>
+            </div>
             @if (comments.Count == 0)
             {
                 <p class="empty-state">No comments yet.</p>
@@ -30,22 +38,39 @@
             {
                 @foreach (var comment in comments)
                 {
-                    <div class="comment-row"><div><strong>@comment.AuthorName</strong><small>@comment.AuthorEmail · @comment.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small></div><p>@comment.Message</p></div>
+                    <div class="comment-row">
+                        <div><strong>@comment.AuthorName</strong><small>@comment.AuthorEmail ·
+                            @comment.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small></div>
+                            <p>@comment.Message</p>
+                        </div>
+                    }
                 }
-            }
-            <EditForm Model="commentRequest" OnValidSubmit="AddCommentAsync" class="comment-form">
-                <DataAnnotationsValidator />
-                <div class="form-field"><label for="message">Add a comment</label><InputTextArea id="message" rows="4" @bind-Value="commentRequest.Message" /><ValidationMessage For="@(() => commentRequest.Message)" /></div>
-                @if (!AuthSession.IsAuthenticated)
+                <EditForm Model="commentRequest" OnValidSubmit="AddCommentAsync" class="comment-form">
+                    <DataAnnotationsValidator />
+                    <div class="form-field"><label for="message">Add a comment</label>
+                        <InputTextArea id="message" rows="4" @bind-Value="commentRequest.Message" />
+                        <ValidationMessage For="@(() => commentRequest.Message)" />
+                    </div>
+                    @if (!AuthSession.IsAuthenticated)
+                    {
+                        <div class="form-grid">
+                            <div class="form-field"><label for="authorName">Your name</label>
+                                <InputText id="authorName" @bind-Value="commentRequest.AuthorName" />
+                            </div>
+                            <div class="form-field"><label for="authorEmail">Your email</label>
+                                <InputText id="authorEmail" type="email" @bind-Value="commentRequest.AuthorEmail" />
+                            </div>
+                        </div>
+                    }
+                    <button class="btn btn-primary" type="submit">Add comment</button>
+                </EditForm>
+                @if (!string.IsNullOrWhiteSpace(message))
                 {
-                    <div class="form-grid"><div class="form-field"><label for="authorName">Your name</label><InputText id="authorName" @bind-Value="commentRequest.AuthorName" /></div><div class="form-field"><label for="authorEmail">Your email</label><InputText id="authorEmail" type="email" @bind-Value="commentRequest.AuthorEmail" /></div></div>
+                    <div class="alert alert-info mt-3">@message</div>
                 }
-                <button class="btn btn-primary" type="submit">Add comment</button>
-            </EditForm>
-            @if (!string.IsNullOrWhiteSpace(message)) { <div class="alert alert-info mt-3">@message</div> }
-        </section>
-    }
-</div>
+            </section>
+        }
+    </div>
 
 @code {
     [Parameter] public int TicketId { get; set; }
