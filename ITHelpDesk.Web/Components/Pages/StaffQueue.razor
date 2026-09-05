@@ -1,8 +1,16 @@
 @page "/staff-queue"
 @rendermode InteractiveServer
 @inject IHttpClientFactory HttpClientFactory
+@inject AuthSession AuthSession
+@inject NavigationManager NavigationManager
 
 <PageTitle>Staff Queue</PageTitle>
+
+@if (!AuthSession.IsStaff)
+{
+    <div class="form-shell"><p class="eyebrow">STAFF ACCESS</p><h1>Sign in required</h1><p class="lead">Only support agents and administrators can manage the queue.</p><a class="btn btn-primary" href="login">Sign in</a></div>
+    return;
+}
 
 <div class="dashboard-shell">
     <div class="dashboard-heading">

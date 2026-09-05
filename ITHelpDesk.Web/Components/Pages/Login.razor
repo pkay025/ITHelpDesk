@@ -1,0 +1,66 @@
+@page "/login"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject AuthSession AuthSession
+@inject NavigationManager NavigationManager
+
+<PageTitle>Staff Login</PageTitle>
+
+<div class="form-shell">
+    <p class="eyebrow">STAFF ACCESS</p>
+    <h1>Sign in to the support portal</h1>
+    <p class="lead">Support agents and administrators can manage the active queue.</p>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="alert alert-danger">@message</div>
+    }
+
+    <EditForm Model="request" OnValidSubmit="LoginAsync" class="panel ticket-form">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-field"><label for="email">Email address</label><InputText id="email" type="email" @bind-Value="request.Email" /><ValidationMessage For="@(() => request.Email)" /></div>
+        <div class="form-field mt-3"><label for="password">Password</label><InputText id="password" type="password" @bind-Value="request.Password" /><ValidationMessage For="@(() => request.Password)" /></div>
+        <button class="btn btn-primary mt-4" type="submit" disabled="@isSubmitting">@(isSubmitting ? "Signing in..." : "Sign in")</button>
+    </EditForm>
+</div>
+
+@code {
+    private LoginRequest request = new();
+    private bool isSubmitting;
+    private string? message;
+
+    private async Task LoginAsync()
+    {
+        isSubmitting = true;
+        message = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("HelpDeskApi");
+            var response = await client.PostAsJsonAsync("api/auth/login", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                message = "Invalid email or password.";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<AuthenticationResponse>();
+            if (result is null)
+            {
+                message = "The login response was invalid.";
+                return;
+            }
+
+            AuthSession.SignIn(result);
+            NavigationManager.NavigateTo("staff-queue");
+        }
+        catch (HttpRequestException)
+        {
+            message = "The API is unavailable. Start the API project and try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
