@@ -1,4 +1,5 @@
 using ITHelpDesk.Core.Contracts;
+using ITHelpDesk.Core.Enums;
 
 namespace ITHelpDesk.Web.Services;
 
