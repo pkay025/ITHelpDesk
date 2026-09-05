@@ -66,6 +66,7 @@ using (var scope = app.Services.CreateScope())
     database.Database.EnsureCreated();
     var authDatabase = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     authDatabase.Database.EnsureCreated();
+    await SeedIdentityAsync(scope.ServiceProvider, builder.Environment);
 }
 
 // Configure the HTTP request pipeline.
@@ -180,5 +181,46 @@ static async Task EnsureRoleAsync(RoleManager<IdentityRole> roles, string role)
     if (!await roles.RoleExistsAsync(role))
     {
         await roles.CreateAsync(new IdentityRole(role));
+    }
+}
+
+static async Task SeedIdentityAsync(IServiceProvider services, IHostEnvironment environment)
+{
+    var roles = services.GetRequiredService<RoleManager<IdentityRole>>();
+    var users = services.GetRequiredService<UserManager<ApplicationUser>>();
+
+    foreach (var role in new[] { UserRole.Requester, UserRole.SupportAgent, UserRole.Administrator })
+    {
+        await EnsureRoleAsync(roles, role);
+    }
+
+    if (!environment.IsDevelopment())
+    {
+        return;
+    }
+
+    var configuration = services.GetRequiredService<IConfiguration>();
+    var email = configuration["Auth:AdminEmail"];
+    var password = configuration["Auth:AdminPassword"];
+    var name = configuration["Auth:AdminName"] ?? "System Administrator";
+    if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+    {
+        return;
+    }
+
+    var admin = await users.FindByEmailAsync(email);
+    if (admin is null)
+    {
+        admin = new ApplicationUser { UserName = email, Email = email, DisplayName = name };
+        var result = await users.CreateAsync(admin, password);
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(string.Join("; ", result.Errors.Select(error => error.Description)));
+        }
+    }
+
+    if (!await users.IsInRoleAsync(admin, UserRole.Administrator))
+    {
+        await users.AddToRoleAsync(admin, UserRole.Administrator);
     }
 }

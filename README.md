@@ -27,6 +27,9 @@ ITHelpDesk/
 - Ticket submission form
 - Staff queue for reviewing requests
 - Ticket status, priority, and assignment updates
+- ASP.NET Core Identity registration and JWT login
+- Requester, support agent, and administrator roles
+- Protected staff queue updates
 - SQLite-backed local development database
 - SQL Server configuration for deployment environments
 
@@ -61,6 +64,29 @@ Open the application at `http://localhost:5168`.
 
 The API creates `ITHelpDesk.API/helpdesk.db` automatically in Development. This file is ignored by Git and persists tickets between API restarts.
 
+Identity creates a separate `ITHelpDesk.API/auth.db` database for local users and roles. It is also ignored by Git.
+
+## Authentication
+
+Create a requester account with `POST /api/auth/register`, then sign in through `POST /api/auth/login` to receive a JWT.
+
+The built-in roles are:
+
+- `Requester`: can submit tickets
+- `SupportAgent`: can manage the staff queue
+- `Administrator`: can manage the staff queue and future administrative features
+
+Ticket updates require a JWT containing either the `SupportAgent` or `Administrator` role. The Web app provides the `/login` page and attaches the token to API requests.
+
+For local development, an administrator can be seeded through environment configuration without storing credentials in source control:
+
+```powershell
+$env:Auth__AdminEmail = "admin@example.com"
+$env:Auth__AdminPassword = "Use-a-local-password-123!"
+$env:Auth__AdminName = "System Administrator"
+dotnet run --project .\ITHelpDesk.API --launch-profile http
+```
+
 ## Ticket API
 
 | Method | Endpoint | Purpose |
@@ -94,4 +120,4 @@ Data Source=helpdesk.db
 
 ## Current Scope
 
-Authentication, role-based permissions, ticket comments, notifications, reporting, automated database migrations, and production deployment configuration are planned follow-up work.
+Ticket comments, notifications, reporting, automated database migrations, and production deployment configuration are planned follow-up work.
