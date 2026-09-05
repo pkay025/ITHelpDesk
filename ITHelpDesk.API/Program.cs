@@ -96,7 +96,7 @@ app.MapPost("/api/auth/register", async (RegisterRequest request, UserManager<Ap
 app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signInManager) =>
 {
     var user = await users.FindByEmailAsync(request.Email.Trim());
-    if (user is null || !await signInManager.CheckPasswordSignInAsync(user, request.Password, false).ContinueWith(result => result.Result.Succeeded))
+    if (user is null || !(await signInManager.CheckPasswordSignInAsync(user, request.Password, false)).Succeeded)
     {
         return Results.Unauthorized();
     }
@@ -110,7 +110,7 @@ app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<Applicat
     };
     claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
     var token = new JwtSecurityToken(claims: claims, expires: DateTime.UtcNow.AddHours(8), signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256));
-    return Results.Ok(new AuthenticationResponse(new JwtSecurityTokenHandler().WriteToken(token), user.DisplayName, user.Email ?? string.Empty, roles));
+    return Results.Ok(new AuthenticationResponse(new JwtSecurityTokenHandler().WriteToken(token), user.DisplayName, user.Email ?? string.Empty, roles.ToArray()));
 });
 
 app.MapGet("/api/tickets", async (HelpDeskDbContext database, TicketStatus? status) =>
