@@ -92,7 +92,8 @@
     private async Task UpdateTicketAsync(Ticket ticket)
     {
         var client = HttpClientFactory.CreateClient("HelpDeskApi");
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthSession.Token);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",
+AuthSession.Token);
         var response = await client.PatchAsJsonAsync($"api/tickets/{ticket.Id}", new UpdateTicketRequest
         {
             Status =
