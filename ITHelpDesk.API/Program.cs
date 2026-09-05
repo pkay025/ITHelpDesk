@@ -81,6 +81,21 @@ using (var scope = app.Services.CreateScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<HelpDeskDbContext>();
     database.Database.EnsureCreated();
+    if (builder.Environment.IsDevelopment())
+    {
+        await database.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS TicketComments (
+                Id INTEGER NOT NULL CONSTRAINT PK_TicketComments PRIMARY KEY AUTOINCREMENT,
+                TicketId INTEGER NOT NULL,
+                AuthorName TEXT NOT NULL,
+                AuthorEmail TEXT NOT NULL,
+                Message TEXT NOT NULL,
+                CreatedAtUtc TEXT NOT NULL,
+                CONSTRAINT FK_TicketComments_Tickets_TicketId FOREIGN KEY (TicketId) REFERENCES Tickets (Id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS IX_TicketComments_TicketId_CreatedAtUtc ON TicketComments (TicketId, CreatedAtUtc);
+            """);
+    }
     var authDatabase = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     authDatabase.Database.EnsureCreated();
     await SeedIdentityAsync(scope.ServiceProvider, builder.Environment);
@@ -151,6 +166,43 @@ app.MapGet("/api/tickets/{id:int}", async (int id, HelpDeskDbContext database) =
 {
     var ticket = await database.Tickets.AsNoTracking().FirstOrDefaultAsync(ticket => ticket.Id == id);
     return ticket is null ? Results.NotFound() : Results.Ok(ticket);
+});
+
+app.MapGet("/api/tickets/{id:int}/comments", async (int id, HelpDeskDbContext database) =>
+{
+    var exists = await database.Tickets.AsNoTracking().AnyAsync(ticket => ticket.Id == id);
+    if (!exists)
+    {
+        return Results.NotFound();
+    }
+
+    var comments = await database.TicketComments.AsNoTracking()
+        .Where(comment => comment.TicketId == id)
+        .OrderBy(comment => comment.CreatedAtUtc)
+        .ToListAsync();
+    return Results.Ok(comments);
+});
+
+app.MapPost("/api/tickets/{id:int}/comments", async (int id, CreateCommentRequest request, HelpDeskDbContext database) =>
+{
+    var exists = await database.Tickets.AnyAsync(ticket => ticket.Id == id);
+    if (!exists)
+    {
+        return Results.NotFound();
+    }
+
+    var comment = new TicketComment
+    {
+        TicketId = id,
+        AuthorName = request.AuthorName.Trim(),
+        AuthorEmail = request.AuthorEmail.Trim(),
+        Message = request.Message.Trim(),
+        CreatedAtUtc = DateTime.UtcNow
+    };
+
+    database.TicketComments.Add(comment);
+    await database.SaveChangesAsync();
+    return Results.Created($"/api/tickets/{id}/comments/{comment.Id}", comment);
 });
 
 app.MapPost("/api/tickets", async (CreateTicketRequest request, HelpDeskDbContext database) =>
