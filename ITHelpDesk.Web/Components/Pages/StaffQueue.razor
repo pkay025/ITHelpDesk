@@ -8,7 +8,12 @@
 
 @if (!AuthSession.IsStaff)
 {
-    <div class="form-shell"><p class="eyebrow">STAFF ACCESS</p><h1>Sign in required</h1><p class="lead">Only support agents and administrators can manage the queue.</p><a class="btn btn-primary" href="login">Sign in</a></div>
+    <div class="form-shell">
+        <p class="eyebrow">STAFF ACCESS</p>
+        <h1>Sign in required</h1>
+        <p class="lead">Only support agents and administrators can manage the queue.</p><a class="btn btn-primary"
+                                                                                           href="login">Sign in</a>
+    </div>
     return;
 }
 

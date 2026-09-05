@@ -19,11 +19,18 @@
     <EditForm Model="request" OnValidSubmit="LoginAsync" class="panel ticket-form">
         <DataAnnotationsValidator />
         <ValidationSummary />
-        <div class="form-field"><label for="email">Email address</label><InputText id="email" type="email" @bind-Value="request.Email" /><ValidationMessage For="@(() => request.Email)" /></div>
-        <div class="form-field mt-3"><label for="password">Password</label><InputText id="password" type="password" @bind-Value="request.Password" /><ValidationMessage For="@(() => request.Password)" /></div>
-        <button class="btn btn-primary mt-4" type="submit" disabled="@isSubmitting">@(isSubmitting ? "Signing in..." : "Sign in")</button>
-    </EditForm>
-</div>
+        <div class="form-field"><label for="email">Email address</label>
+            <InputText id="email" type="email" @bind-Value="request.Email" />
+            <ValidationMessage For="@(() => request.Email)" />
+        </div>
+        <div class="form-field mt-3"><label for="password">Password</label>
+            <InputText id="password" type="password" @bind-Value="request.Password" />
+            <ValidationMessage For="@(() => request.Password)" />
+        </div>
+        <button class="btn btn-primary mt-4" type="submit" disabled="@isSubmitting">@(isSubmitting ? "Signing in..." :
+                   "Sign in")</button>
+        </EditForm>
+    </div>
 
 @code {
     private LoginRequest request = new();
