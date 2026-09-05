@@ -92,6 +92,7 @@
     private async Task UpdateTicketAsync(Ticket ticket)
     {
         var client = HttpClientFactory.CreateClient("HelpDeskApi");
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthSession.Token);
         var response = await client.PatchAsJsonAsync($"api/tickets/{ticket.Id}", new UpdateTicketRequest
         {
             Status =
@@ -99,6 +100,12 @@ ticket.Status,
             Priority = ticket.Priority,
             AssignedTo = ticket.AssignedTo
         });
-        message = response.IsSuccessStatusCode ? $"Ticket #{ticket.Id} updated." : "The ticket could not be updated.";
+        message = response.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => "Your login session has expired. Sign in again and retry.",
+            System.Net.HttpStatusCode.Forbidden => "Your account is not authorized to update tickets.",
+            _ when response.IsSuccessStatusCode => $"Ticket #{ticket.Id} updated.",
+            _ => "The ticket could not be updated."
+        };
     }
 }

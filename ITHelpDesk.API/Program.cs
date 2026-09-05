@@ -40,8 +40,25 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 .AddEntityFrameworkStores<AuthDbContext>()
 .AddSignInManager();
 
-var jwtKey = builder.Configuration["Jwt:Key"] ??
-    Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) && builder.Environment.IsDevelopment())
+{
+    var keyPath = Path.Combine(builder.Environment.ContentRootPath, "jwt.key");
+    jwtKey = File.Exists(keyPath)
+        ? await File.ReadAllTextAsync(keyPath)
+        : Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
+    if (!File.Exists(keyPath))
+    {
+        await File.WriteAllTextAsync(keyPath, jwtKey);
+    }
+}
+
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException("Configure Jwt:Key using secure deployment configuration.");
+}
+
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
