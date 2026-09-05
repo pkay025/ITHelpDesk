@@ -20,6 +20,11 @@ if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDbContext<HelpDeskDbContext>(options => options.UseSqlite("Data Source=helpdesk.db"));
 }
+else
+{
+    builder.Services.AddDbContext<HelpDeskDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("HelpDesk")));
+}
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
@@ -49,11 +54,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorization();
-else
-{
-    builder.Services.AddDbContext<HelpDeskDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("HelpDesk")));
-}
 
 var app = builder.Build();
 
