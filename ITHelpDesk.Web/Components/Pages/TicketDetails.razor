@@ -117,7 +117,8 @@
     private async Task DeleteCommentAsync(TicketComment comment)
     {
         var client = HttpClientFactory.CreateClient("HelpDeskApi");
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthSession.Token);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",
+AuthSession.Token);
         var response = await client.DeleteAsync($"api/tickets/{TicketId}/comments/{comment.Id}");
         if (response.IsSuccessStatusCode)
         {
