@@ -205,6 +205,20 @@ app.MapPost("/api/tickets/{id:int}/comments", async (int id, CreateCommentReques
     return Results.Created($"/api/tickets/{id}/comments/{comment.Id}", comment);
 });
 
+app.MapDelete("/api/tickets/{ticketId:int}/comments/{commentId:int}", async (int ticketId, int commentId, HelpDeskDbContext database) =>
+{
+    var comment = await database.TicketComments.FirstOrDefaultAsync(comment =>
+        comment.Id == commentId && comment.TicketId == ticketId);
+    if (comment is null)
+    {
+        return Results.NotFound();
+    }
+
+    database.TicketComments.Remove(comment);
+    await database.SaveChangesAsync();
+    return Results.NoContent();
+}).RequireAuthorization(policy => policy.RequireRole(UserRole.SupportAgent, UserRole.Administrator));
+
 app.MapPost("/api/tickets", async (CreateTicketRequest request, HelpDeskDbContext database) =>
 {
     var ticket = new Ticket

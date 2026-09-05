@@ -42,6 +42,10 @@
                         <div><strong>@comment.AuthorName</strong><small>@comment.AuthorEmail ·
                             @comment.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small></div>
                             <p>@comment.Message</p>
+                            @if (AuthSession.IsStaff)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCommentAsync(comment)">Remove</button>
+                            }
                         </div>
                     }
                 }
@@ -107,6 +111,24 @@
         else
         {
             message = "The comment could not be added.";
+        }
+    }
+
+    private async Task DeleteCommentAsync(TicketComment comment)
+    {
+        var client = HttpClientFactory.CreateClient("HelpDeskApi");
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthSession.Token);
+        var response = await client.DeleteAsync($"api/tickets/{TicketId}/comments/{comment.Id}");
+        if (response.IsSuccessStatusCode)
+        {
+            comments.Remove(comment);
+            message = "Comment removed.";
+        }
+        else
+        {
+            message = response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                ? "Your login session has expired. Sign in again."
+                : "The comment could not be removed.";
         }
     }
 }
