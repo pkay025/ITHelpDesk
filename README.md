@@ -89,12 +89,12 @@ dotnet run --project .\ITHelpDesk.API --launch-profile http
 
 ## Ticket API
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/api/tickets` | List tickets |
-| GET | `/api/tickets/{id}` | Get one ticket |
-| POST | `/api/tickets` | Create a ticket |
-| PATCH | `/api/tickets/{id}` | Update status, priority, or assignment |
+| Method | Endpoint            | Purpose                                |
+| ------ | ------------------- | -------------------------------------- |
+| GET    | `/api/tickets`      | List tickets                           |
+| GET    | `/api/tickets/{id}` | Get one ticket                         |
+| POST   | `/api/tickets`      | Create a ticket                        |
+| PATCH  | `/api/tickets/{id}` | Update status, priority, or assignment |
 
 The list endpoint also accepts an optional status filter, for example:
 
