@@ -23,6 +23,7 @@
 !.env.example
 appsettings.Local.json
 appsettings.*.Local.json
+auth.db
 
 ## Logs and temporary files
 *.log
