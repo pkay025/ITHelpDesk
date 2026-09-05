@@ -1,0 +1,87 @@
+@page "/tickets/{TicketId:int}"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject AuthSession AuthSession
+
+<PageTitle>Ticket Details</PageTitle>
+
+<div class="form-shell">
+    @if (ticket is null)
+    {
+        <p class="status-message">Loading ticket...</p>
+    }
+    else
+    {
+        <p class="eyebrow">TICKET #@ticket.Id</p>
+        <h1>@ticket.Title</h1>
+        <p class="lead">@ticket.Description</p>
+
+        <section class="panel">
+            <div class="ticket-row"><div><strong>Requester</strong><small>@ticket.RequesterName · @ticket.RequesterEmail</small></div><span class="status-pill status-@ticket.Status.ToString().ToLowerInvariant()">@ticket.Status</span></div>
+        </section>
+
+        <section class="panel comments-panel">
+            <div class="panel-heading"><div><p class="eyebrow">ACTIVITY</p><h2>Conversation</h2></div></div>
+            @if (comments.Count == 0)
+            {
+                <p class="empty-state">No comments yet.</p>
+            }
+            else
+            {
+                @foreach (var comment in comments)
+                {
+                    <div class="comment-row"><div><strong>@comment.AuthorName</strong><small>@comment.AuthorEmail · @comment.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small></div><p>@comment.Message</p></div>
+                }
+            }
+            <EditForm Model="commentRequest" OnValidSubmit="AddCommentAsync" class="comment-form">
+                <DataAnnotationsValidator />
+                <div class="form-field"><label for="message">Add a comment</label><InputTextArea id="message" rows="4" @bind-Value="commentRequest.Message" /><ValidationMessage For="@(() => commentRequest.Message)" /></div>
+                @if (!AuthSession.IsAuthenticated)
+                {
+                    <div class="form-grid"><div class="form-field"><label for="authorName">Your name</label><InputText id="authorName" @bind-Value="commentRequest.AuthorName" /></div><div class="form-field"><label for="authorEmail">Your email</label><InputText id="authorEmail" type="email" @bind-Value="commentRequest.AuthorEmail" /></div></div>
+                }
+                <button class="btn btn-primary" type="submit">Add comment</button>
+            </EditForm>
+            @if (!string.IsNullOrWhiteSpace(message)) { <div class="alert alert-info mt-3">@message</div> }
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public int TicketId { get; set; }
+    private Ticket? ticket;
+    private List<TicketComment> comments = [];
+    private CreateCommentRequest commentRequest = new();
+    private string? message;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var client = HttpClientFactory.CreateClient("HelpDeskApi");
+        ticket = await client.GetFromJsonAsync<Ticket>($"api/tickets/{TicketId}");
+        comments = await client.GetFromJsonAsync<List<TicketComment>>($"api/tickets/{TicketId}/comments") ?? [];
+        if (AuthSession.IsAuthenticated)
+        {
+            commentRequest.AuthorName = AuthSession.Name ?? string.Empty;
+            commentRequest.AuthorEmail = AuthSession.Email ?? string.Empty;
+        }
+    }
+
+    private async Task AddCommentAsync()
+    {
+        var client = HttpClientFactory.CreateClient("HelpDeskApi");
+        var response = await client.PostAsJsonAsync($"api/tickets/{TicketId}/comments", commentRequest);
+        if (response.IsSuccessStatusCode)
+        {
+            var comment = await response.Content.ReadFromJsonAsync<TicketComment>();
+            if (comment is not null) comments.Add(comment);
+            var authorName = commentRequest.AuthorName;
+            var authorEmail = commentRequest.AuthorEmail;
+            commentRequest = new() { AuthorName = authorName, AuthorEmail = authorEmail };
+            message = "Comment added.";
+        }
+        else
+        {
+            message = "The comment could not be added.";
+        }
+    }
+}
