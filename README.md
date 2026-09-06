@@ -80,7 +80,7 @@ Ticket updates require a JWT containing either the `SupportAgent` or `Administra
 
 For local development, an administrator can be seeded through environment configuration without storing credentials in source control:
 
-```powershell
+```powershell 
 $env:Auth__AdminEmail = "admin@example.com"
 $env:Auth__AdminPassword = "Use-a-local-password-123!"
 $env:Auth__AdminName = "System Administrator"
