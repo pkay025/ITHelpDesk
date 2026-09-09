@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ITHelpDesk.Core.Enums;
 
 namespace ITHelpDesk.Core.Contracts;
 
@@ -12,6 +13,8 @@ public class RegisterRequest
 
     [Required, StringLength(100, MinimumLength = 8)]
     public string Password { get; set; } = string.Empty;
+
+    public UserType UserType { get; set; } = UserType.Student;
 }
 
 public class LoginRequest
@@ -23,4 +26,4 @@ public class LoginRequest
     public string Password { get; set; } = string.Empty;
 }
 
-public record AuthenticationResponse(string Token, string Name, string Email, IReadOnlyList<string> Roles);
+public record AuthenticationResponse(string Token, string Name, string Email, IReadOnlyList<string> Roles, UserType UserType);

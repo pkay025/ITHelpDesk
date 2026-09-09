@@ -1,4 +1,7 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject ITHelpDesk.Web.Services.AuthSession AuthSession
+@inject NavigationManager NavigationManager
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +10,18 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            @if (AuthSession.IsAuthenticated)
+            {
+                <span class="user-info me-3">
+                    <strong>@(AuthSession.Name ?? AuthSession.Email)</strong>
+                    <span class="badge bg-secondary ms-1">@AuthSession.UserType</span>
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="HandleSignOut">Sign out</button>
+            }
+            else
+            {
+                <a href="login">Sign in</a>
+            }
         </div>
 
         <article class="content px-4">
@@ -21,3 +35,21 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthSession.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthSession.OnChange -= StateHasChanged;
+    }
+
+    private void HandleSignOut()
+    {
+        AuthSession.SignOut();
+        NavigationManager.NavigateTo("");
+    }
+}

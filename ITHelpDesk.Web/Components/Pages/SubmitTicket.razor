@@ -1,6 +1,7 @@
 @page "/submit-ticket"
 @rendermode InteractiveServer
 @inject IHttpClientFactory HttpClientFactory
+@inject AuthSession AuthSession
 
 <PageTitle>Submit Ticket</PageTitle>
 
@@ -53,6 +54,26 @@
     private bool isSubmitting;
     private string? message;
 
+    protected override void OnInitialized()
+    {
+        PopulateRequesterInfo();
+    }
+
+    private void PopulateRequesterInfo()
+    {
+        if (AuthSession.IsAuthenticated)
+        {
+            if (!string.IsNullOrWhiteSpace(AuthSession.Name))
+            {
+                request.RequesterName = AuthSession.Name;
+            }
+            if (!string.IsNullOrWhiteSpace(AuthSession.Email))
+            {
+                request.RequesterEmail = AuthSession.Email;
+            }
+        }
+    }
+
     private async Task SubmitAsync()
     {
         isSubmitting = true;
@@ -66,6 +87,7 @@
                 var ticket = await response.Content.ReadFromJsonAsync<Ticket>();
                 message = $"Ticket #{ticket?.Id} submitted successfully.";
                 request = new();
+                PopulateRequesterInfo();
             }
             else
             {

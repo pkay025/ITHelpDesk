@@ -98,6 +98,10 @@ using (var scope = app.Services.CreateScope())
     }
     var authDatabase = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     authDatabase.Database.EnsureCreated();
+    if (builder.Environment.IsDevelopment())
+    {
+        await EnsureUserTypeColumnAsync(authDatabase);
+    }
     await SeedIdentityAsync(scope.ServiceProvider, builder.Environment);
 }
 
@@ -117,7 +121,8 @@ app.MapPost("/api/auth/register", async (RegisterRequest request, UserManager<Ap
     {
         UserName = request.Email.Trim(),
         Email = request.Email.Trim(),
-        DisplayName = request.Name.Trim()
+        DisplayName = request.Name.Trim(),
+        UserType = request.UserType
     };
 
     var result = await users.CreateAsync(user, request.Password);
@@ -148,7 +153,7 @@ app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<Applicat
     };
     claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
     var token = new JwtSecurityToken(claims: claims, expires: DateTime.UtcNow.AddHours(8), signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256));
-    return Results.Ok(new AuthenticationResponse(new JwtSecurityTokenHandler().WriteToken(token), user.DisplayName, user.Email ?? string.Empty, roles.ToArray()));
+    return Results.Ok(new AuthenticationResponse(new JwtSecurityTokenHandler().WriteToken(token), user.DisplayName, user.Email ?? string.Empty, roles.ToArray(), user.UserType));
 });
 
 app.MapGet("/api/tickets", async (HelpDeskDbContext database, TicketStatus? status) =>
@@ -267,6 +272,19 @@ static async Task EnsureRoleAsync(RoleManager<IdentityRole> roles, string role)
     }
 }
 
+static async Task EnsureUserTypeColumnAsync(AuthDbContext database)
+{
+    var connection = database.Database.GetDbConnection();
+    await connection.OpenAsync();
+    await using var check = connection.CreateCommand();
+    check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('AspNetUsers') WHERE name = 'UserType'";
+    var exists = Convert.ToInt32(await check.ExecuteScalarAsync()) > 0;
+    if (!exists)
+    {
+        await database.Database.ExecuteSqlRawAsync("ALTER TABLE AspNetUsers ADD COLUMN UserType INTEGER NOT NULL DEFAULT 0");
+    }
+}
+
 static async Task SeedIdentityAsync(IServiceProvider services, IHostEnvironment environment)
 {
     var roles = services.GetRequiredService<RoleManager<IdentityRole>>();
@@ -294,7 +312,7 @@ static async Task SeedIdentityAsync(IServiceProvider services, IHostEnvironment 
     var admin = await users.FindByEmailAsync(email);
     if (admin is null)
     {
-        admin = new ApplicationUser { UserName = email, Email = email, DisplayName = name };
+        admin = new ApplicationUser { UserName = email, Email = email, DisplayName = name, UserType = UserType.Staff };
         var result = await users.CreateAsync(admin, password);
         if (!result.Succeeded)
         {

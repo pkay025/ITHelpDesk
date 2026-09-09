@@ -9,8 +9,11 @@ public class AuthSession
     public string? Name { get; private set; }
     public string? Email { get; private set; }
     public IReadOnlyList<string> Roles { get; private set; } = [];
+    public UserType UserType { get; private set; } = UserType.Student;
     public bool IsAuthenticated => !string.IsNullOrWhiteSpace(Token);
     public bool IsStaff => Roles.Contains(UserRole.SupportAgent) || Roles.Contains(UserRole.Administrator);
+
+    public event Action? OnChange;
 
     public void SignIn(AuthenticationResponse response)
     {
@@ -18,6 +21,8 @@ public class AuthSession
         Name = response.Name;
         Email = response.Email;
         Roles = response.Roles;
+        UserType = response.UserType;
+        NotifyStateChanged();
     }
 
     public void SignOut()
@@ -26,5 +31,9 @@ public class AuthSession
         Name = null;
         Email = null;
         Roles = [];
+        UserType = UserType.Student;
+        NotifyStateChanged();
     }
+
+    private void NotifyStateChanged() => OnChange?.Invoke();
 }
