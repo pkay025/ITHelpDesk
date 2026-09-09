@@ -2,4 +2,5 @@
   <Project Path="ITHelpDesk.API/ITHelpDesk.API.csproj" />
   <Project Path="ITHelpDesk.Core/ITHelpDesk.Core.csproj" />
   <Project Path="ITHelpDesk.Web/ITHelpDesk.Web.csproj" />
+  <Project Path="ITHelpDesk.Tests/ITHelpDesk.Tests.csproj" />
 </Solution>
