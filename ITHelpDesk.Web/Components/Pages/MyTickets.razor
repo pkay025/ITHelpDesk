@@ -1,0 +1,108 @@
+@page "/my-tickets"
+@rendermode InteractiveServer
+@using ITHelpDesk.Core.Entities
+@using ITHelpDesk.Core.Enums
+@using ITHelpDesk.Web.Services
+@inject IHttpClientFactory HttpClientFactory
+@inject AuthSession AuthSession
+@inject NavigationManager NavigationManager
+
+<PageTitle>My Tickets</PageTitle>
+
+@if (!AuthSession.IsAuthenticated)
+{
+    <div class="form-shell">
+        <p class="eyebrow">MY TICKETS</p>
+        <h1>Sign in required</h1>
+        <p class="lead">Please sign in to view and track your submitted support requests.</p>
+        <a class="btn btn-primary" href="login">Sign in</a>
+        <a class="btn btn-outline-secondary ms-2" href="register">Register</a>
+    </div>
+    return;
+}
+
+<div class="dashboard-shell">
+    <div class="dashboard-heading">
+        <div>
+            <p class="eyebrow">REQUESTER PORTAL</p>
+            <h1>My Support Tickets</h1>
+            <p class="lead">Track progress, view status updates, and open active requests.</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <a class="btn btn-primary" href="submit-ticket">Submit new ticket</a>
+            <button class="btn btn-outline-primary" @onclick="LoadTicketsAsync">Refresh</button>
+        </div>
+    </div>
+
+    @if (tickets is null)
+    {
+        <p class="status-message">Loading your tickets...</p>
+    }
+    else if (tickets.Count == 0)
+    {
+        <section class="panel empty-state text-center py-5">
+            <p>You haven't submitted any support requests yet.</p>
+            <a class="btn btn-primary mt-3" href="submit-ticket">Submit a ticket</a>
+        </section>
+    }
+    else
+    {
+        <section class="panel queue-panel">
+            @foreach (var ticket in tickets)
+            {
+                <div class="queue-row">
+                    <div class="queue-main">
+                        <span class="ticket-id">#@ticket.Id</span>
+                        <div>
+                            <strong><a href="tickets/@ticket.Id">@ticket.Title</a></strong>
+                            <small>Created @ticket.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small>
+                            <p>@ticket.Description</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="status-pill status-@ticket.Status.ToString().ToLowerInvariant()">@ticket.Status</span>
+                        <span class="badge bg-secondary">@ticket.Priority</span>
+                        @if (!string.IsNullOrWhiteSpace(ticket.AssignedTo))
+                        {
+                            <small class="text-muted">Assigned to: @ticket.AssignedTo</small>
+                        }
+                    </div>
+                </div>
+            }
+        </section>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="alert alert-info mt-3">@message</div>
+    }
+</div>
+
+@code {
+    private List<Ticket>? tickets;
+    private string? message;
+
+    protected override Task OnInitializedAsync() => LoadTicketsAsync();
+
+    private async Task LoadTicketsAsync()
+    {
+        if (!AuthSession.IsAuthenticated || string.IsNullOrWhiteSpace(AuthSession.Email))
+        {
+            tickets = [];
+            return;
+        }
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("HelpDeskApi");
+            var emailParam = Uri.EscapeDataString(AuthSession.Email);
+            tickets = await client.GetFromJsonAsync<List<Ticket>>($"api/tickets?requesterEmail={emailParam}") ?? [];
+            message = null;
+        }
+        catch (HttpRequestException)
+        {
+            tickets = [];
+            message = "The API is unavailable. Please check that the API project is running.";
+        }
+    }
+}

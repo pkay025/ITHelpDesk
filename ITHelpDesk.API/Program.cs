@@ -156,12 +156,28 @@ app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<Applicat
     return Results.Ok(new AuthenticationResponse(new JwtSecurityTokenHandler().WriteToken(token), user.DisplayName, user.Email ?? string.Empty, roles.ToArray(), user.UserType));
 });
 
-app.MapGet("/api/tickets", async (HelpDeskDbContext database, TicketStatus? status) =>
+app.MapGet("/api/tickets", async (HelpDeskDbContext database, TicketStatus? status, string? requesterEmail, string? search) =>
 {
     var query = database.Tickets.AsNoTracking().AsQueryable();
     if (status is not null)
     {
         query = query.Where(ticket => ticket.Status == status);
+    }
+
+    if (!string.IsNullOrWhiteSpace(requesterEmail))
+    {
+        var trimmedEmail = requesterEmail.Trim().ToLower();
+        query = query.Where(ticket => ticket.RequesterEmail.ToLower() == trimmedEmail);
+    }
+
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+        var term = search.Trim().ToLower();
+        query = query.Where(ticket =>
+            ticket.Title.ToLower().Contains(term) ||
+            ticket.Description.ToLower().Contains(term) ||
+            ticket.RequesterName.ToLower().Contains(term) ||
+            (ticket.AssignedTo != null && ticket.AssignedTo.ToLower().Contains(term)));
     }
 
     return Results.Ok(await query.OrderByDescending(ticket => ticket.CreatedAtUtc).ToListAsync());

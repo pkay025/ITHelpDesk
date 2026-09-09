@@ -76,6 +76,23 @@ public class DbContextTests : IDisposable
         Assert.Equal("Restarting access point now.", comments[0].Message);
     }
 
+    [Fact]
+    public async Task CanFilterTicketsByRequesterEmail()
+    {
+        _context.Tickets.AddRange(
+            new Ticket { Title = "T1", Description = "D1", RequesterName = "User A", RequesterEmail = "usera@example.com" },
+            new Ticket { Title = "T2", Description = "D2", RequesterName = "User B", RequesterEmail = "userb@example.com" }
+        );
+        await _context.SaveChangesAsync();
+
+        var userATickets = await _context.Tickets
+            .Where(t => t.RequesterEmail == "usera@example.com")
+            .ToListAsync();
+
+        Assert.Single(userATickets);
+        Assert.Equal("T1", userATickets[0].Title);
+    }
+
     public void Dispose()
     {
         _context.Dispose();
