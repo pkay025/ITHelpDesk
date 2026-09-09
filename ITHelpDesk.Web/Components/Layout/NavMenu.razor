@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+@implements IDisposable
+@inject ITHelpDesk.Web.Services.AuthSession AuthSession
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">ITHelpDesk</a>
     </div>
@@ -26,11 +29,32 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Staff login
-            </NavLink>
-        </div>
+        @if (!AuthSession.IsAuthenticated)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="login">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Sign in
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="register">
+                    <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Register
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthSession.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthSession.OnChange -= StateHasChanged;
+    }
+}
 

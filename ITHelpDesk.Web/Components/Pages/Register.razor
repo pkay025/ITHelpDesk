@@ -1,0 +1,125 @@
+@page "/register"
+@rendermode InteractiveServer
+@using ITHelpDesk.Core.Contracts
+@using ITHelpDesk.Core.Enums
+@using ITHelpDesk.Web.Services
+@inject IHttpClientFactory HttpClientFactory
+@inject AuthSession AuthSession
+@inject NavigationManager NavigationManager
+
+<PageTitle>Register Account</PageTitle>
+
+<div class="form-shell">
+    <p class="eyebrow">CREATE AN ACCOUNT</p>
+    <h1>Sign up for IT Help Desk</h1>
+    <p class="lead">Register as a student or staff member to submit and track support requests.</p>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success">@successMessage</div>
+    }
+
+    <EditForm Model="request" OnValidSubmit="RegisterAsync" class="panel ticket-form">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-field">
+            <label for="name">Full name</label>
+            <InputText id="name" @bind-Value="request.Name" placeholder="Jane Doe" />
+            <ValidationMessage For="@(() => request.Name)" />
+        </div>
+
+        <div class="form-field mt-3">
+            <label for="email">Email address</label>
+            <InputText id="email" type="email" @bind-Value="request.Email" placeholder="jane.doe@example.com" />
+            <ValidationMessage For="@(() => request.Email)" />
+        </div>
+
+        <div class="form-field mt-3">
+            <label for="password">Password (minimum 8 characters)</label>
+            <InputText id="password" type="password" @bind-Value="request.Password" />
+            <ValidationMessage For="@(() => request.Password)" />
+        </div>
+
+        <div class="form-field mt-3">
+            <label for="userType">Account type</label>
+            <InputSelect id="userType" @bind-Value="request.UserType">
+                <option value="@UserType.Student">Student</option>
+                <option value="@UserType.Staff">Staff</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => request.UserType)" />
+        </div>
+
+        <button class="btn btn-primary mt-4" type="submit" disabled="@isSubmitting">
+            @(isSubmitting ? "Creating account..." : "Create account")
+        </button>
+    </EditForm>
+
+    <div class="mt-4">
+        <p>Already have an account? <a href="login">Sign in here</a>.</p>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest request = new();
+    private bool isSubmitting;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private async Task RegisterAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("HelpDeskApi");
+            var registerResponse = await client.PostAsJsonAsync("api/auth/register", request);
+
+            if (!registerResponse.IsSuccessStatusCode)
+            {
+                var errorText = await registerResponse.Content.ReadAsStringAsync();
+                errorMessage = !string.IsNullOrWhiteSpace(errorText)
+                    ? errorText.Trim('"', ' ', '\n', '\r')
+                    : "Registration failed. Please check your information and try again.";
+                return;
+            }
+
+            // Auto-login after successful registration
+            var loginRequest = new LoginRequest
+            {
+                Email = request.Email,
+                Password = request.Password
+            };
+
+            var loginResponse = await client.PostAsJsonAsync("api/auth/login", loginRequest);
+            if (loginResponse.IsSuccessStatusCode)
+            {
+                var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthenticationResponse>();
+                if (authResult is not null)
+                {
+                    AuthSession.SignIn(authResult);
+                    NavigationManager.NavigateTo("submit-ticket");
+                    return;
+                }
+            }
+
+            successMessage = "Account created successfully! You can now sign in.";
+            request = new();
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "The API is unavailable. Start the API project and try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
