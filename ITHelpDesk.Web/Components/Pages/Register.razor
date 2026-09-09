@@ -30,13 +30,13 @@
 
         <div class="form-field">
             <label for="name">Full name</label>
-            <InputText id="name" @bind-Value="request.Name" placeholder="Jane Doe" />
+            <InputText id="name" @bind-Value="request.Name" placeholder="Emmanuel Nunoo Mensah" />
             <ValidationMessage For="@(() => request.Name)" />
         </div>
 
         <div class="form-field mt-3">
             <label for="email">Email address</label>
-            <InputText id="email" type="email" @bind-Value="request.Email" placeholder="jane.doe@example.com" />
+            <InputText id="email" type="email" @bind-Value="request.Email" placeholder="@("nunoomensahemmanuel@example.com")" />
             <ValidationMessage For="@(() => request.Email)" />
         </div>
 
