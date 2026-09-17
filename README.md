@@ -2,7 +2,7 @@
 
 A web-based help desk system for submitting, tracking, assigning, and resolving technical support tickets.
 
-## Technology
+## Technolog
 
 - .NET 10
 - ASP.NET Core Minimal Web API
