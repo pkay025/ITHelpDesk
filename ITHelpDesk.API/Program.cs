@@ -73,6 +73,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorization();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+        if (allowedOrigins is { Length: > 0 })
+        {
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+        else
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -111,6 +132,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
