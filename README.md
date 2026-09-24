@@ -40,11 +40,4 @@ docker run -d -p 5168:8080 -e ASPNETCORE_ENVIRONMENT=Production -e ApiBaseUrl="h
 | :--- | :--- | :--- |
 | `ASPNETCORE_ENVIRONMENT` | Hosting environment | `Production` |
 | `ASPNETCORE_HTTP_PORTS` | Container listening port | `8080` |
-| `ApiBaseUrl` | URL of the deployed backend API | `https://ithelpdesk-api.onrender.com` |
-
-### Deploying to Render / Railway
-1. Create a new **Web Service**.
-2. Connect your GitHub repository and select the **`frontend`** branch.
-3. Select **Docker** as the environment (Render/Railway will automatically detect the root `Dockerfile`).
-4. Set the **`ApiBaseUrl`** environment variable to your deployed API's public URL.
-5. Deploy!
+| `ApiBaseUrl` | URL of the deployed backend API | `https://ithelpdesk-api.onrender.com`
