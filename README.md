@@ -50,10 +50,3 @@ docker run -d -p 5200:8080 -e ASPNETCORE_ENVIRONMENT=Production -e Jwt__Key="YOU
 | `Auth__AdminEmail` | Auto-seed admin email on initial startup | `admin@example.com` |
 | `Auth__AdminPassword` | Auto-seed admin password | `SecureAdmin123!` |
 | `Auth__AdminName` | Auto-seed admin display name | `System Admin` |
-
-### Deploying to Render / Railway
-1. Create a new **Web Service**.
-2. Connect your GitHub repository and select the **`backend`** branch.
-3. Select **Docker** as the environment (Render/Railway will automatically detect the root `Dockerfile`).
-4. Add the required Environment Variables in the platform dashboard (`Jwt__Key`, `Cors__AllowedOrigins__0`, etc.).
-5. Deploy!
