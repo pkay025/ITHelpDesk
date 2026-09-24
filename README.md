@@ -1,50 +1,142 @@
-# IT Help Desk — Frontend Web Application
+# IT Help Desk Management System
 
-This branch (`frontend`) contains the Blazor Web application for the IT Help Desk Management System.
+A web-based help desk system for submitting, tracking, assigning, and resolving technical support tickets.
 
-## Architecture
+## Technology
 
-- **`ITHelpDesk.Web/`**: Interactive Blazor Web App (.NET 10 Server-side rendering), responsive Bootstrap 5 UI, client auth session, and API integration.
-- **`ITHelpDesk.Core/`**: Shared entities, enums, and request contracts.
+- .NET 10
+- ASP.NET Core Minimal Web API
+- Blazor Web App with interactive server rendering
+- Entity Framework Core
+- xUnit test framework
+- SQLite for local Development
+- SQL Server for non-Development environments
 
-## Connecting to the Backend API
+## Solution Structure
 
-The web application communicates with the backend REST API via an `HttpClient`.
+```text
+ITHelpDesk/
+|-- ITHelpDesk.API/   Backend API and database access
+|-- ITHelpDesk.Core/  Shared entities, enums, and request contracts
+|-- ITHelpDesk.Web/   Blazor user interface
+|-- ITHelpDesk.Tests/ Automated test suite (xUnit)
+`-- ITHelpDesk.slnx   Solution file
+```
 
-The backend address is configured through the **`ApiBaseUrl`** configuration key:
+## Features
 
-- **Local Development**: Default is `http://localhost:5200` in `ITHelpDesk.Web/appsettings.json`.
-- **Production / Deployed**: Override with the environment variable `ApiBaseUrl` pointing to your deployed backend API URL (e.g., `https://ithelpdesk-api.onrender.com`).
+- Help desk dashboard with ticket metrics and active counts
+- Ticket submission form with automatic requester population for authenticated users
+- Ticket detail view with full comment threads (create, list, delete comments)
+- Staff queue for triaging, assigning ownership, and updating ticket status/priority
+- User registration and login in the Blazor Web UI (`/register` and `/login`)
+- Student and Staff user classification (`UserType`)
+- ASP.NET Core Identity authentication and JWT token issuance
+- Requester, support agent, and administrator roles
+- Protected staff queue updates
+- SQLite-backed local development database
+- Comprehensive automated xUnit test suite covering lifecycle, contracts, and database persistence
+- SQL Server configuration for deployment environments
+
+## Requirements
+
+- .NET SDK 10.0 or later
+- SQL Server for non-Development environments
+
+Check the installed SDK with:
+
+```powershell
+dotnet --version
+```
 
 ## Run Locally
+
+Start the API in one terminal:
+
+```powershell
+dotnet run --project .\ITHelpDesk.API --launch-profile http
+```
+
+The API runs at `http://localhost:5200`.
+
+Start the Blazor Web app in a second terminal:
 
 ```powershell
 dotnet run --project .\ITHelpDesk.Web --launch-profile http
 ```
-The application opens at `http://localhost:5168`.
 
-*Make sure your backend API is running (either locally or on your deployed cloud host) so data loads properly.*
+Open the application at `http://localhost:5168`.
 
-## Container & Cloud Deployment (Docker / Render / Railway / Fly.io)
+The API creates `ITHelpDesk.API/helpdesk.db` automatically in Development. This file is ignored by Git and persists tickets between API restarts.
 
-### Build and Run with Docker
+Identity creates a separate `ITHelpDesk.API/auth.db` database for local users and roles. It is also ignored by Git.
 
-```bash
-docker build -t ithelpdesk-web .
-docker run -d -p 5168:8080 -e ASPNETCORE_ENVIRONMENT=Production -e ApiBaseUrl="https://YOUR_DEPLOYED_BACKEND_URL" ithelpdesk-web
+## Authentication & Users
+
+Users can register through the Web UI at `/register` or via `POST /api/auth/register`, selecting their account type (`Student` or `Staff`).
+
+Sign in at `/login` or through `POST /api/auth/login` to receive a JWT.
+
+The built-in roles are:
+
+- `Requester`: can submit tickets and view their requests
+- `SupportAgent`: can manage the staff queue and update tickets
+- `Administrator`: can manage the staff queue and system configuration
+
+Ticket updates require a JWT containing either the `SupportAgent` or `Administrator` role. The Web app attaches the bearer token to authorized API requests.
+
+For local development, an administrator can be seeded through environment configuration without storing credentials in source control:
+
+```powershell 
+$env:Auth__AdminEmail = "admin@example.com"
+$env:Auth__AdminPassword = "Use-a-local-password-123!"
+$env:Auth__AdminName = "System Administrator"
+dotnet run --project .\ITHelpDesk.API --launch-profile http
 ```
 
-### Environment Variables for Production
+## API Endpoints
 
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `ASPNETCORE_ENVIRONMENT` | Hosting environment | `Production` |
-| `ASPNETCORE_HTTP_PORTS` | Container listening port | `8080` |
-| `ApiBaseUrl` | URL of the deployed backend API | `https://ithelpdesk-api.onrender.com` |
+### Authentication
 
-### Deploying to Render / Railway
-1. Create a new **Web Service**.
-2. Connect your GitHub repository and select the **`frontend`** branch.
-3. Select **Docker** as the environment (Render/Railway will automatically detect the root `Dockerfile`).
-4. Set the **`ApiBaseUrl`** environment variable to your deployed API's public URL.
-5. Deploy!
+| Method | Endpoint             | Purpose                                           |
+| ------ | -------------------- | ------------------------------------------------- |
+| POST   | `/api/auth/register` | Register a new user (`Student` or `Staff`)        |
+| POST   | `/api/auth/login`    | Sign in and obtain JWT token and role information |
+
+### Tickets
+
+| Method | Endpoint                         | Purpose                                |
+| ------ | -------------------------------- | -------------------------------------- |
+| GET    | `/api/tickets`                   | List tickets (supports `?status=` filter)|
+| GET    | `/api/tickets/{id}`              | Get ticket details                     |
+| POST   | `/api/tickets`                   | Create a new ticket                    |
+| PATCH  | `/api/tickets/{id}`              | Update status, priority, or assignment |
+| GET    | `/api/tickets/{id}/comments`     | List comments on a ticket              |
+| POST   | `/api/tickets/{id}/comments`     | Add comment to a ticket                |
+| DELETE | `/api/tickets/{id}/comments/{commentId}` | Delete a comment               |
+
+## Build and Test
+
+Build the complete solution:
+
+```powershell
+dotnet build .\ITHelpDesk.slnx
+```
+
+Run the automated test suite:
+
+```powershell
+dotnet test .\ITHelpDesk.slnx
+```
+
+## Database Configuration
+
+Development uses SQLite through:
+
+```text
+Data Source=helpdesk.db
+```
+
+## Future Scope
+
+Email notifications, advanced analytics/reporting export, automated migrations for production SQL Server, and container deployment configuration are planned follow-up enhancements.
