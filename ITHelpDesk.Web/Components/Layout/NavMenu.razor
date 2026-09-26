@@ -1,9 +1,11 @@
 @implements IDisposable
 @inject ITHelpDesk.Web.Services.AuthSession AuthSession
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">ITHelpDesk</a>
+        <a class="navbar-brand" href="@BrandHref">ITHelpDesk</a>
     </div>
 </div>
 
@@ -11,59 +13,87 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="submit-ticket">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Submit ticket
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="staff-queue">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Staff queue
-            </NavLink>
-        </div>
-
-        @if (AuthSession.IsAuthenticated)
+        @foreach (var item in NavItems)
         {
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="my-tickets">
-                    <span class="bi bi-card-checklist" aria-hidden="true"></span> My tickets
+                <NavLink class="nav-link" href="@item.Href" Match="@item.Match">
+                    <span class="@item.IconClass" aria-hidden="true"></span> @item.Label
                 </NavLink>
             </div>
         }
-
-        @if (!AuthSession.IsAuthenticated)
+        @if (AuthSession.IsAuthenticated)
         {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="login">
-                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Sign in
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="register">
-                    <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Register
-                </NavLink>
+            <div class="nav-item px-3 mt-3 pt-3 border-top border-secondary">
+                <button class="nav-link btn btn-link text-start w-100 text-white-50" @onclick="HandleSignOut">
+                    <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Sign out
+                </button>
             </div>
         }
     </nav>
 </div>
 
 @code {
+    private record NavigationItem(string Label, string Href, string IconClass, NavLinkMatch Match = NavLinkMatch.All);
+
+    private string BrandHref => !AuthSession.IsAuthenticated
+        ? "login"
+        : (AuthSession.IsStaff ? "dashboard" : "home");
+
+    private IEnumerable<NavigationItem> NavItems
+    {
+        get
+        {
+            if (!AuthSession.IsAuthenticated)
+            {
+                return
+                [
+                    new("Sign in", "login", "bi bi-list-nested-nav-menu"),
+                    new("Register", "register", "bi bi-plus-square-fill-nav-menu")
+                ];
+            }
+
+            if (AuthSession.IsStaff)
+            {
+                return
+                [
+                    new("Dashboard", "dashboard", "bi bi-dashboard-nav-menu"),
+                    new("Staff Queue", "staff-queue", "bi bi-list-nested-nav-menu")
+                ];
+            }
+
+            return
+            [
+                new("Home", "home", "bi bi-house-door-fill-nav-menu"),
+                new("Submit Ticket", "submit-ticket", "bi bi-plus-square-fill-nav-menu"),
+                new("My Tickets", "my-tickets", "bi bi-card-checklist-nav-menu")
+            ];
+        }
+    }
+
     protected override void OnInitialized()
     {
-        AuthSession.OnChange += StateHasChanged;
+        AuthSession.OnChange += HandleAuthChange;
     }
 
     public void Dispose()
     {
-        AuthSession.OnChange -= StateHasChanged;
+        AuthSession.OnChange -= HandleAuthChange;
+    }
+
+    private void HandleAuthChange() => InvokeAsync(StateHasChanged);
+
+    private async Task HandleSignOut()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("authStorage.remove", "ithelpdesk_auth");
+        }
+        catch
+        {
+        }
+
+        AuthSession.SignOut();
+        NavigationManager.NavigateTo("login");
     }
 }
 

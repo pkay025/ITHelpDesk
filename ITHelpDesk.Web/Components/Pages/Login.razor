@@ -1,45 +1,111 @@
+@page "/"
 @page "/login"
 @rendermode InteractiveServer
+@implements IDisposable
+@using ITHelpDesk.Core.Enums
 @inject IHttpClientFactory HttpClientFactory
 @inject AuthSession AuthSession
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Staff Login</PageTitle>
+<PageTitle>Sign In | IT Help Desk</PageTitle>
 
-<div class="form-shell">
-    <p class="eyebrow">STAFF ACCESS</p>
-    <h1>Sign in to the support portal</h1>
-    <p class="lead">Support agents and administrators can manage the active queue.</p>
-
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <div class="alert alert-danger">@message</div>
-    }
-
-    <EditForm Model="request" OnValidSubmit="LoginAsync" class="panel ticket-form">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-        <div class="form-field"><label for="email">Email address</label>
-            <InputText id="email" type="email" @bind-Value="request.Email" />
-            <ValidationMessage For="@(() => request.Email)" />
+<div class="auth-layout">
+    <section class="auth-visual" aria-label="IT Help Desk workspace">
+        <div class="auth-visual-overlay">
+            <span class="auth-brand">IT Help Desk</span>
+            <div>
+                <p class="eyebrow">SUPPORT, SIMPLIFIED</p>
+                <h1>Get help moving.</h1>
+                <p>Submit requests, follow progress, and stay connected with your support team.</p>
+            </div>
         </div>
-        <div class="form-field mt-3"><label for="password">Password</label>
-            <InputText id="password" type="password" @bind-Value="request.Password" />
-            <ValidationMessage For="@(() => request.Password)" />
-        </div>
-        <button class="btn btn-primary mt-4" type="submit" disabled="@isSubmitting">@(isSubmitting ? "Signing in..." :
-                   "Sign in")</button>
+    </section>
+
+    <section class="auth-form-panel">
+        <div class="auth-form-content">
+            <p class="eyebrow">WELCOME BACK</p>
+            <h1>Sign In</h1>
+            <p class="lead">Sign in to submit and track your support requests.</p>
+
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <div class="alert alert-danger" role="alert">@message</div>
+            }
+
+            <EditForm Model="request" OnValidSubmit="LoginAsync" class="auth-form">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-field">
+                    <label for="userType">Account type</label>
+                    <InputSelect id="userType" @bind-Value="request.UserType">
+                        <option value="">Select account type</option>
+                        <option value="@UserType.Student">Student</option>
+                        <option value="@UserType.Staff">Staff</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => request.UserType)" />
+                </div>
+                <div class="form-field">
+                    <label for="email">Email address</label>
+                    <InputText id="email" type="email" @bind-Value="request.Email" placeholder="Email Address" />
+                    <ValidationMessage For="@(() => request.Email)" />
+                </div>
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <div class="password-field">
+                        <InputText id="password" type="@(showPassword ? "text" : "password")" @bind-Value="request.Password" placeholder="Password" />
+                        <button type="button" class="password-toggle" @onclick="TogglePassword" aria-label="@(showPassword ? "Hide password" : "Show password")">@(showPassword ? "Hide" : "Show")</button>
+                    </div>
+                    <ValidationMessage For="@(() => request.Password)" />
+                </div>
+                <button class="btn btn-primary auth-submit" type="submit" disabled="@isSubmitting">
+                    @(isSubmitting ? "Signing in..." : "Sign In")
+                </button>
         </EditForm>
 
-    <div class="mt-4">
-        <p>Don't have an account yet? <a href="register">Register here</a>.</p>
-    </div>
+            <p class="auth-switch">Don't have an account yet? <a href="register">Register here.</a></p>
+        </div>
+    </section>
 </div>
 
 @code {
     private LoginRequest request = new();
     private bool isSubmitting;
+    private bool showPassword;
     private string? message;
+
+    protected override void OnInitialized()
+    {
+        AuthSession.OnChange += HandleAuthChange;
+        if (AuthSession.IsAuthenticated)
+        {
+            RedirectToAppropriateDestination();
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthSession.OnChange -= HandleAuthChange;
+    }
+
+    private void HandleAuthChange()
+    {
+        InvokeAsync(() =>
+        {
+            if (AuthSession.IsAuthenticated)
+            {
+                RedirectToAppropriateDestination();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void RedirectToAppropriateDestination()
+    {
+        NavigationManager.NavigateTo(AuthSession.IsStaff ? "dashboard" : "home", replace: true);
+    }
+
+    private void TogglePassword() => showPassword = !showPassword;
 
     private async Task LoginAsync()
     {
@@ -63,7 +129,14 @@
             }
 
             AuthSession.SignIn(result);
-            NavigationManager.NavigateTo("staff-queue");
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("authStorage.set", "ithelpdesk_auth", System.Text.Json.JsonSerializer.Serialize(result));
+            }
+            catch
+            {
+            }
+            NavigationManager.NavigateTo(AuthSession.IsStaff ? "dashboard" : "home");
         }
         catch (HttpRequestException)
         {

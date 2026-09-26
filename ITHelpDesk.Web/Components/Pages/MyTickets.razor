@@ -1,5 +1,6 @@
 @page "/my-tickets"
 @rendermode InteractiveServer
+@implements IDisposable
 @using ITHelpDesk.Core.Entities
 @using ITHelpDesk.Core.Enums
 @using ITHelpDesk.Web.Services
@@ -9,15 +10,8 @@
 
 <PageTitle>My Tickets</PageTitle>
 
-@if (!AuthSession.IsAuthenticated)
+@if (!AuthSession.IsAuthenticated || AuthSession.IsStaff)
 {
-    <div class="form-shell">
-        <p class="eyebrow">MY TICKETS</p>
-        <h1>Sign in required</h1>
-        <p class="lead">Please sign in to view and track your submitted support requests.</p>
-        <a class="btn btn-primary" href="login">Sign in</a>
-        <a class="btn btn-outline-secondary ms-2" href="register">Register</a>
-    </div>
     return;
 }
 
@@ -82,7 +76,45 @@
     private List<Ticket>? tickets;
     private string? message;
 
-    protected override Task OnInitializedAsync() => LoadTicketsAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        AuthSession.OnChange += HandleAuthChange;
+        if (AuthSession.IsInitialized)
+        {
+            await CheckAccessAndLoadAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthSession.OnChange -= HandleAuthChange;
+    }
+
+    private async void HandleAuthChange()
+    {
+        await InvokeAsync(async () =>
+        {
+            await CheckAccessAndLoadAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task CheckAccessAndLoadAsync()
+    {
+        if (!AuthSession.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("login", replace: true);
+            return;
+        }
+
+        if (AuthSession.IsStaff)
+        {
+            NavigationManager.NavigateTo("dashboard", replace: true);
+            return;
+        }
+
+        await LoadTicketsAsync();
+    }
 
     private async Task LoadTicketsAsync()
     {

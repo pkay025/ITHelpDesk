@@ -24,6 +24,9 @@ public class LoginRequest
 
     [Required]
     public string Password { get; set; } = string.Empty;
+
+    [Required]
+    public UserType? UserType { get; set; }
 }
 
 public record AuthenticationResponse(string Token, string Name, string Email, IReadOnlyList<string> Roles, UserType UserType);

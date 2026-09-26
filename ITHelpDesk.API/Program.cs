@@ -152,29 +152,37 @@ app.MapPost("/api/auth/register", async (RegisterRequest request, UserManager<Ap
         return Results.ValidationProblem(result.Errors.ToDictionary(error => error.Code, error => new[] { error.Description }));
     }
 
-    await EnsureRoleAsync(roles, UserRole.Requester);
-    await users.AddToRoleAsync(user, UserRole.Requester);
+    var accountRole = request.UserType == UserType.Staff ? UserRole.SupportAgent : UserRole.Requester;
+    await EnsureRoleAsync(roles, accountRole);
+    await users.AddToRoleAsync(user, accountRole);
     return Results.Ok(new { message = "Account created." });
 });
 
-app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signInManager) =>
+app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<ApplicationUser> users, RoleManager<IdentityRole> roleManager, SignInManager<ApplicationUser> signInManager) =>
 {
     var user = await users.FindByEmailAsync(request.Email.Trim());
-    if (user is null || !(await signInManager.CheckPasswordSignInAsync(user, request.Password, false)).Succeeded)
+    if (user is null || request.UserType is null || user.UserType != request.UserType.Value || !(await signInManager.CheckPasswordSignInAsync(user, request.Password, false)).Succeeded)
     {
         return Results.Unauthorized();
     }
 
-    var roles = await users.GetRolesAsync(user);
+    var expectedRole = user.UserType == UserType.Staff ? UserRole.SupportAgent : UserRole.Requester;
+    await EnsureRoleAsync(roleManager, expectedRole);
+    if (!await users.IsInRoleAsync(user, expectedRole))
+    {
+        await users.AddToRoleAsync(user, expectedRole);
+    }
+
+    var userRoles = await users.GetRolesAsync(user);
     var claims = new List<Claim>
     {
         new(JwtRegisteredClaimNames.Sub, user.Id),
         new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
         new(ClaimTypes.Name, user.DisplayName)
     };
-    claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+    claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
     var token = new JwtSecurityToken(claims: claims, expires: DateTime.UtcNow.AddHours(8), signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256));
-    return Results.Ok(new AuthenticationResponse(new JwtSecurityTokenHandler().WriteToken(token), user.DisplayName, user.Email ?? string.Empty, roles.ToArray(), user.UserType));
+    return Results.Ok(new AuthenticationResponse(new JwtSecurityTokenHandler().WriteToken(token), user.DisplayName, user.Email ?? string.Empty, userRoles.ToArray(), user.UserType));
 });
 
 app.MapGet("/api/tickets", async (HelpDeskDbContext database, TicketStatus? status, string? requesterEmail, string? search) =>

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -11,12 +11,35 @@
     <link rel="stylesheet" href="@Assets["ITHelpDesk.Web.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
+    <script>
+        window.authStorage = {
+            get: function (key) {
+                try {
+                    return localStorage.getItem(key) || sessionStorage.getItem(key);
+                } catch (e) {
+                    return null;
+                }
+            },
+            set: function (key, val) {
+                try {
+                    localStorage.setItem(key, val);
+                    sessionStorage.setItem(key, val);
+                } catch (e) {}
+            },
+            remove: function (key) {
+                try {
+                    localStorage.removeItem(key);
+                    sessionStorage.removeItem(key);
+                } catch (e) {}
+            }
+        };
+    </script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

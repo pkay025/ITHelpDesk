@@ -1,6 +1,5 @@
-@page "/home"
-@page "/student-dashboard"
-@page "/student-home"
+@page "/dashboard"
+@page "/staff-dashboard"
 @rendermode InteractiveServer
 @implements IDisposable
 @inject IHttpClientFactory HttpClientFactory
@@ -8,9 +7,9 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
-<PageTitle>Student Dashboard | IT Help Desk</PageTitle>
+<PageTitle>Staff Dashboard | Help Desk</PageTitle>
 
-@if (!AuthSession.IsAuthenticated || AuthSession.IsStaff)
+@if (!AuthSession.IsAuthenticated || !AuthSession.IsStaff)
 {
     return;
 }
@@ -18,20 +17,19 @@
 <div class="dashboard-shell">
 	<div class="dashboard-heading">
 		<div>
-			<p class="eyebrow">STUDENT PORTAL</p>
-			<h1>Student Dashboard</h1>
-			<p class="lead">Track your support requests, view status updates, and open active tickets.</p>
+			<p class="eyebrow">IT OPERATIONS</p>
+			<h1>Help Desk Dashboard</h1>
+			<p class="lead">A clear view of every support request, from first report to resolution.</p>
 		</div>
 		<div class="d-flex gap-2 align-items-center">
-			<a class="btn btn-primary" href="submit-ticket">Submit a ticket</a>
-			<a class="btn btn-outline-primary" href="my-tickets">My tickets</a>
+			<a class="btn btn-primary" href="staff-queue">Open Staff Queue</a>
 			<button class="btn btn-outline-danger" @onclick="HandleSignOut">Sign out</button>
 		</div>
 	</div>
 
 	@if (tickets is null)
 	{
-		<p class="status-message">Loading your ticket activity...</p>
+		<p class="status-message">Loading ticket activity...</p>
 	}
 	else
 	{
@@ -45,14 +43,14 @@
 		<section class="panel recent-panel">
 			<div class="panel-heading">
 				<div>
-					<p class="eyebrow">MY TICKETS</p>
+					<p class="eyebrow">LIVE QUEUE</p>
 					<h2>Recent requests</h2>
 				</div>
-				<a href="my-tickets">View my tickets</a>
+				<a href="staff-queue">View full queue</a>
 			</div>
 			@if (tickets.Count == 0)
 			{
-				<p class="empty-state">You haven't submitted any support requests yet. <a href="submit-ticket">Submit your first request</a> to get started.</p>
+				<p class="empty-state">No tickets yet. The queue is clear.</p>
 			}
 			else
 			{
@@ -62,7 +60,7 @@
 						<div class="ticket-row">
 							<div>
 								<strong><a href="tickets/@ticket.Id">#@ticket.Id · @ticket.Title</a></strong>
-								<small>Created @ticket.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small>
+								<small>@ticket.RequesterName · @ticket.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</small>
 							</div>
 							<span class="status-pill status-@ticket.Status.ToString().ToLowerInvariant()">@ticket.Status</span>
 						</div>
@@ -111,9 +109,9 @@
 			return;
 		}
 
-		if (AuthSession.IsStaff)
+		if (!AuthSession.IsStaff)
 		{
-			NavigationManager.NavigateTo("dashboard", replace: true);
+			NavigationManager.NavigateTo("home", replace: true);
 			return;
 		}
 
@@ -122,17 +120,10 @@
 
 	private async Task LoadTicketsAsync()
 	{
-		if (string.IsNullOrWhiteSpace(AuthSession.Email))
-		{
-			tickets = [];
-			return;
-		}
-
 		try
 		{
 			var client = HttpClientFactory.CreateClient("HelpDeskApi");
-			var emailParam = Uri.EscapeDataString(AuthSession.Email);
-			tickets = await client.GetFromJsonAsync<List<Ticket>>($"api/tickets?requesterEmail={emailParam}") ?? [];
+			tickets = await client.GetFromJsonAsync<List<Ticket>>("api/tickets") ?? [];
 		}
 		catch (HttpRequestException)
 		{

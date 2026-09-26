@@ -1,9 +1,16 @@
 @page "/submit-ticket"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject IHttpClientFactory HttpClientFactory
 @inject AuthSession AuthSession
+@inject NavigationManager NavigationManager
 
 <PageTitle>Submit Ticket</PageTitle>
+
+@if (!AuthSession.IsAuthenticated || AuthSession.IsStaff)
+{
+    return;
+}
 
 <div class="form-shell">
     <p class="eyebrow">REQUEST SUPPORT</p>
@@ -56,6 +63,41 @@
 
     protected override void OnInitialized()
     {
+        AuthSession.OnChange += HandleAuthChange;
+        if (AuthSession.IsInitialized)
+        {
+            CheckAccessAndPopulate();
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthSession.OnChange -= HandleAuthChange;
+    }
+
+    private void HandleAuthChange()
+    {
+        InvokeAsync(() =>
+        {
+            CheckAccessAndPopulate();
+            StateHasChanged();
+        });
+    }
+
+    private void CheckAccessAndPopulate()
+    {
+        if (!AuthSession.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("login", replace: true);
+            return;
+        }
+
+        if (AuthSession.IsStaff)
+        {
+            NavigationManager.NavigateTo("dashboard", replace: true);
+            return;
+        }
+
         PopulateRequesterInfo();
     }
 
