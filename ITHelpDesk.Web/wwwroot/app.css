@@ -393,14 +393,16 @@ h1:focus {
 
 .auth-brand {
   font:
-    700 0.8rem/1.2 Arial,
+    700 3.2rem/1.2 Arial,
     sans-serif;
-  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .auth-visual .eyebrow {
-  color: #e2a93b;
+  color: #fffdf8;
+  font:
+    0.8rem Arial,
+    sans-serif;
 }
 
 .auth-visual h1 {
