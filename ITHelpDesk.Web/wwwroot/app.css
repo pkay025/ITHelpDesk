@@ -378,7 +378,7 @@ h1:focus {
   position: relative;
   min-height: 100vh;
   background:
-    linear-gradient(135deg, rgba(23, 60, 53, 0.24), rgba(29, 41, 37, 0.7)),
+    linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0)),
     url("background.jpg") center/cover;
   color: #fffdf8;
 }
@@ -399,7 +399,7 @@ h1:focus {
 }
 
 .auth-visual .eyebrow {
-  color: #fffdf8;
+  color: #f78a69;
   font:
     0.8rem Arial,
     sans-serif;
