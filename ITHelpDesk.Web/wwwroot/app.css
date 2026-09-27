@@ -393,9 +393,9 @@ h1:focus {
 
 .auth-brand {
   font:
-    700 3.2rem/1.2 Arial,
+    700 2.2rem/1.2 Arial,
     sans-serif;
-  text-transform: uppercase;
+  text-transform: capitalize;
 }
 
 .auth-visual .eyebrow {
