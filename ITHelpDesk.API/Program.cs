@@ -18,20 +18,11 @@ builder.Services.AddOpenApi();
 
 var connectionString = builder.Configuration.GetConnectionString("HelpDesk");
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddDbContext<HelpDeskDbContext>(options =>
-        options.UseSqlite("Data Source=helpdesk.db"));
-    builder.Services.AddDbContext<AuthDbContext>(options =>
-        options.UseSqlite("Data Source=auth.db"));
-}
-else
-{
-    builder.Services.AddDbContext<HelpDeskDbContext>(options =>
-        options.UseSqlServer(connectionString));
-    builder.Services.AddDbContext<AuthDbContext>(options =>
-        options.UseSqlServer(connectionString));
-}
+builder.Services.AddDbContext<HelpDeskDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
@@ -48,9 +39,7 @@ var jwtKey = builder.Configuration["Jwt:Key"];
 
 if (string.IsNullOrWhiteSpace(jwtKey) && builder.Environment.IsDevelopment())
 {
-    var keyPath = Path.Combine(
-        builder.Environment.ContentRootPath,
-        "jwt.key");
+    var keyPath = Path.Combine(builder.Environment.ContentRootPath, "jwt.key");
 
     jwtKey = File.Exists(keyPath)
         ? await File.ReadAllTextAsync(keyPath)
@@ -69,9 +58,8 @@ if (string.IsNullOrWhiteSpace(jwtKey))
         "Configure Jwt:Key using secure deployment configuration.");
 }
 
-var signingKey =
-    new SymmetricSecurityKey(
-        Encoding.UTF8.GetBytes(jwtKey));
+var signingKey = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(jwtKey));
 
 builder.Services.AddAuthentication(
     JwtBearerDefaults.AuthenticationScheme)
@@ -94,9 +82,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        var allowedOrigins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>();
+        var allowedOrigins =
+            builder.Configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>();
 
         if (allowedOrigins is { Length: > 0 })
         {
@@ -117,25 +106,19 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Initialize the local SQLite databases or apply SQL Server migrations.
+// Apply SQL Server EF Core migrations.
 using (var scope = app.Services.CreateScope())
 {
-    var database = scope.ServiceProvider
-        .GetRequiredService<HelpDeskDbContext>();
+    var database =
+        scope.ServiceProvider
+            .GetRequiredService<HelpDeskDbContext>();
 
-    var authDatabase = scope.ServiceProvider
-        .GetRequiredService<AuthDbContext>();
+    var authDatabase =
+        scope.ServiceProvider
+            .GetRequiredService<AuthDbContext>();
 
-    if (builder.Environment.IsDevelopment())
-    {
-        await database.Database.EnsureCreatedAsync();
-        await authDatabase.Database.EnsureCreatedAsync();
-    }
-    else
-    {
-        await database.Database.MigrateAsync();
-        await authDatabase.Database.MigrateAsync();
-    }
+    await database.Database.MigrateAsync();
+    await authDatabase.Database.MigrateAsync();
 
     await SeedIdentityAsync(
         scope.ServiceProvider,
@@ -270,23 +253,21 @@ app.MapGet("/api/tickets", async (
         var trimmedEmail =
             requesterEmail.Trim().ToLower();
 
-        query = query.Where(
-            ticket =>
-                ticket.RequesterEmail.ToLower() ==
-                trimmedEmail);
+        query = query.Where(ticket =>
+            ticket.RequesterEmail
+                .ToLower() == trimmedEmail);
     }
 
     if (!string.IsNullOrWhiteSpace(search))
     {
         var term = search.Trim().ToLower();
 
-        query = query.Where(
-            ticket =>
-                ticket.Title.ToLower().Contains(term) ||
-                ticket.Description.ToLower().Contains(term) ||
-                ticket.RequesterName.ToLower().Contains(term) ||
-                (ticket.AssignedTo != null &&
-                 ticket.AssignedTo.ToLower().Contains(term)));
+        query = query.Where(ticket =>
+            ticket.Title.ToLower().Contains(term) ||
+            ticket.Description.ToLower().Contains(term) ||
+            ticket.RequesterName.ToLower().Contains(term) ||
+            (ticket.AssignedTo != null &&
+             ticket.AssignedTo.ToLower().Contains(term)));
     }
 
     return Results.Ok(
@@ -386,8 +367,8 @@ app.MapDelete(
 
     return Results.NoContent();
 })
-.RequireAuthorization(
-    policy => policy.RequireRole(
+.RequireAuthorization(policy =>
+    policy.RequireRole(
         UserRole.SupportAgent,
         UserRole.Administrator));
 
@@ -421,8 +402,7 @@ app.MapPatch("/api/tickets/{id:int}", async (
     HelpDeskDbContext database) =>
 {
     var ticket = await database.Tickets
-        .FirstOrDefaultAsync(
-            ticket => ticket.Id == id);
+        .FirstOrDefaultAsync(ticket => ticket.Id == id);
 
     if (ticket is null)
     {
@@ -440,8 +420,9 @@ app.MapPatch("/api/tickets/{id:int}", async (
     ticket.UpdatedAtUtc = DateTime.UtcNow;
 
     ticket.ResolvedAtUtc =
-        request.Status is TicketStatus.Resolved
-            or TicketStatus.Closed
+        request.Status is
+            TicketStatus.Resolved or
+            TicketStatus.Closed
             ? ticket.ResolvedAtUtc ?? DateTime.UtcNow
             : null;
 
@@ -449,8 +430,8 @@ app.MapPatch("/api/tickets/{id:int}", async (
 
     return Results.Ok(ticket);
 })
-.RequireAuthorization(
-    policy => policy.RequireRole(
+.RequireAuthorization(policy =>
+    policy.RequireRole(
         UserRole.SupportAgent,
         UserRole.Administrator));
 
@@ -499,11 +480,8 @@ static async Task SeedIdentityAsync(
     var configuration =
         services.GetRequiredService<IConfiguration>();
 
-    var email =
-        configuration["Auth:AdminEmail"];
-
-    var password =
-        configuration["Auth:AdminPassword"];
+    var email = configuration["Auth:AdminEmail"];
+    var password = configuration["Auth:AdminPassword"];
 
     var name =
         configuration["Auth:AdminName"]
