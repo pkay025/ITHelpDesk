@@ -11,7 +11,8 @@ public class AuthSession
     public IReadOnlyList<string> Roles { get; private set; } = [];
     public UserType UserType { get; private set; } = UserType.Student;
     public bool IsAuthenticated => !string.IsNullOrWhiteSpace(Token);
-    public bool IsStaff => Roles.Contains(UserRole.SupportAgent) || Roles.Contains(UserRole.Administrator);
+    public bool IsStaff => UserType == UserType.Staff || Roles.Contains(UserRole.SupportAgent) || Roles.Contains(UserRole.Administrator);
+    public bool IsInitialized { get; set; }
 
     public event Action? OnChange;
 
@@ -22,6 +23,7 @@ public class AuthSession
         Email = response.Email;
         Roles = response.Roles;
         UserType = response.UserType;
+        IsInitialized = true;
         NotifyStateChanged();
     }
 
@@ -32,8 +34,12 @@ public class AuthSession
         Email = null;
         Roles = [];
         UserType = UserType.Student;
+        IsInitialized = true;
         NotifyStateChanged();
     }
+
+    public AuthenticationResponse? ToResponse() =>
+        IsAuthenticated ? new(Token!, Name ?? string.Empty, Email ?? string.Empty, Roles, UserType) : null;
 
     private void NotifyStateChanged() => OnChange?.Invoke();
 }
