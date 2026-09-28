@@ -16,14 +16,22 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddOpenApi();
 
-// SQL Server database
 var connectionString = builder.Configuration.GetConnectionString("HelpDesk");
 
-builder.Services.AddDbContext<HelpDeskDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseSqlServer(connectionString));
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDbContext<HelpDeskDbContext>(options =>
+        options.UseSqlite("Data Source=helpdesk.db"));
+    builder.Services.AddDbContext<AuthDbContext>(options =>
+        options.UseSqlite("Data Source=auth.db"));
+}
+else
+{
+    builder.Services.AddDbContext<HelpDeskDbContext>(options =>
+        options.UseSqlServer(connectionString));
+    builder.Services.AddDbContext<AuthDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
@@ -109,18 +117,25 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply EF Core migrations and seed Identity data.
+// Initialize the local SQLite databases or apply SQL Server migrations.
 using (var scope = app.Services.CreateScope())
 {
     var database = scope.ServiceProvider
         .GetRequiredService<HelpDeskDbContext>();
 
-    await database.Database.MigrateAsync();
-
     var authDatabase = scope.ServiceProvider
         .GetRequiredService<AuthDbContext>();
 
-    await authDatabase.Database.MigrateAsync();
+    if (builder.Environment.IsDevelopment())
+    {
+        await database.Database.EnsureCreatedAsync();
+        await authDatabase.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await database.Database.MigrateAsync();
+        await authDatabase.Database.MigrateAsync();
+    }
 
     await SeedIdentityAsync(
         scope.ServiceProvider,
