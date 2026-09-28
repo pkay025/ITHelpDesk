@@ -1,19 +1,14 @@
 @page "/staff-queue"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject IHttpClientFactory HttpClientFactory
 @inject AuthSession AuthSession
 @inject NavigationManager NavigationManager
 
 <PageTitle>Staff Queue</PageTitle>
 
-@if (!AuthSession.IsStaff)
+@if (!AuthSession.IsAuthenticated || !AuthSession.IsStaff)
 {
-    <div class="form-shell">
-        <p class="eyebrow">STAFF ACCESS</p>
-        <h1>Sign in required</h1>
-        <p class="lead">Only support agents and administrators can manage the queue.</p><a class="btn btn-primary"
-                                                                                           href="login">Sign in</a>
-    </div>
     return;
 }
 
@@ -72,7 +67,45 @@
     private List<Ticket>? tickets;
     private string? message;
 
-    protected override Task OnInitializedAsync() => LoadTicketsAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        AuthSession.OnChange += HandleAuthChange;
+        if (AuthSession.IsInitialized)
+        {
+            await CheckAccessAndLoadAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthSession.OnChange -= HandleAuthChange;
+    }
+
+    private async void HandleAuthChange()
+    {
+        await InvokeAsync(async () =>
+        {
+            await CheckAccessAndLoadAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task CheckAccessAndLoadAsync()
+    {
+        if (!AuthSession.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("login", replace: true);
+            return;
+        }
+
+        if (!AuthSession.IsStaff)
+        {
+            NavigationManager.NavigateTo("home", replace: true);
+            return;
+        }
+
+        await LoadTicketsAsync();
+    }
 
     private async Task LoadTicketsAsync()
     {

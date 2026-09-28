@@ -1,7 +1,9 @@
 @page "/tickets/{TicketId:int}"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject IHttpClientFactory HttpClientFactory
 @inject AuthSession AuthSession
+@inject NavigationManager NavigationManager
 
 <PageTitle>Ticket Details</PageTitle>
 
@@ -83,11 +85,66 @@
     private CreateCommentRequest commentRequest = new();
     private string? message;
 
+    protected override void OnInitialized()
+    {
+        AuthSession.OnChange += HandleAuthChange;
+    }
+
+    public void Dispose()
+    {
+        AuthSession.OnChange -= HandleAuthChange;
+    }
+
+    private void HandleAuthChange()
+    {
+        InvokeAsync(async () =>
+        {
+            await LoadTicketDataAsync();
+            StateHasChanged();
+        });
+    }
+
     protected override async Task OnParametersSetAsync()
     {
+        if (AuthSession.IsInitialized)
+        {
+            await LoadTicketDataAsync();
+        }
+    }
+
+    private async Task LoadTicketDataAsync()
+    {
+        if (!AuthSession.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("login", replace: true);
+            return;
+        }
+
         var client = HttpClientFactory.CreateClient("HelpDeskApi");
-        ticket = await client.GetFromJsonAsync<Ticket>($"api/tickets/{TicketId}");
-        comments = await client.GetFromJsonAsync<List<TicketComment>>($"api/tickets/{TicketId}/comments") ?? [];
+        try
+        {
+            ticket = await client.GetFromJsonAsync<Ticket>($"api/tickets/{TicketId}");
+        }
+        catch (HttpRequestException)
+        {
+            ticket = null;
+        }
+
+        if (ticket is not null && !AuthSession.IsStaff && !string.Equals(ticket.RequesterEmail, AuthSession.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo("home", replace: true);
+            return;
+        }
+
+        try
+        {
+            comments = await client.GetFromJsonAsync<List<TicketComment>>($"api/tickets/{TicketId}/comments") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            comments = [];
+        }
+
         if (AuthSession.IsAuthenticated)
         {
             commentRequest.AuthorName = AuthSession.Name ?? string.Empty;

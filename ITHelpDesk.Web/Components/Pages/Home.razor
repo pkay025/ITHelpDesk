@@ -1,22 +1,37 @@
-﻿@page "/"
+@page "/home"
+@page "/student-dashboard"
+@page "/student-home"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject IHttpClientFactory HttpClientFactory
+@inject AuthSession AuthSession
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Help Desk Dashboard</PageTitle>
+<PageTitle>Student Dashboard | IT Help Desk</PageTitle>
+
+@if (!AuthSession.IsAuthenticated || AuthSession.IsStaff)
+{
+    return;
+}
 
 <div class="dashboard-shell">
 	<div class="dashboard-heading">
 		<div>
-			<p class="eyebrow">IT OPERATIONS</p>
-			<h1>Help Desk Dashboard</h1>
-			<p class="lead">A clear view of every support request, from first report to resolution.</p>
+			<p class="eyebrow">STUDENT PORTAL</p>
+			<h1>Student Dashboard</h1>
+			<p class="lead">Track your support requests, view status updates, and open active tickets.</p>
 		</div>
-		<a class="btn btn-primary" href="submit-ticket">Submit a ticket</a>
+		<div class="d-flex gap-2 align-items-center">
+			<a class="btn btn-primary" href="submit-ticket">Submit a ticket</a>
+			<a class="btn btn-outline-primary" href="my-tickets">My tickets</a>
+			<button class="btn btn-outline-danger" @onclick="HandleSignOut">Sign out</button>
+		</div>
 	</div>
 
 	@if (tickets is null)
 	{
-		<p class="status-message">Loading ticket activity...</p>
+		<p class="status-message">Loading your ticket activity...</p>
 	}
 	else
 	{
@@ -28,10 +43,16 @@
 		</div>
 
 		<section class="panel recent-panel">
-			<div class="panel-heading"><div><p class="eyebrow">LIVE QUEUE</p><h2>Recent requests</h2></div><a href="staff-queue">View full queue</a></div>
+			<div class="panel-heading">
+				<div>
+					<p class="eyebrow">MY TICKETS</p>
+					<h2>Recent requests</h2>
+				</div>
+				<a href="my-tickets">View my tickets</a>
+			</div>
 			@if (tickets.Count == 0)
 			{
-				<p class="empty-state">No tickets yet. Submit the first request to get started.</p>
+				<p class="empty-state">You haven't submitted any support requests yet. <a href="submit-ticket">Submit your first request</a> to get started.</p>
 			}
 			else
 			{
@@ -39,7 +60,10 @@
 					@foreach (var ticket in tickets.Take(5))
 					{
 						<div class="ticket-row">
-							<div><strong>#@ticket.Id · @ticket.Title</strong><small>@ticket.RequesterName · @ticket.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</small></div>
+							<div>
+								<strong><a href="tickets/@ticket.Id">#@ticket.Id · @ticket.Title</a></strong>
+								<small>Created @ticket.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small>
+							</div>
 							<span class="status-pill status-@ticket.Status.ToString().ToLowerInvariant()">@ticket.Status</span>
 						</div>
 					}
@@ -58,14 +82,75 @@
 
 	protected override async Task OnInitializedAsync()
 	{
+		AuthSession.OnChange += HandleAuthChange;
+		if (AuthSession.IsInitialized)
+		{
+			await CheckAccessAndLoadAsync();
+		}
+	}
+
+	public void Dispose()
+	{
+		AuthSession.OnChange -= HandleAuthChange;
+	}
+
+	private async void HandleAuthChange()
+	{
+		await InvokeAsync(async () =>
+		{
+			await CheckAccessAndLoadAsync();
+			StateHasChanged();
+		});
+	}
+
+	private async Task CheckAccessAndLoadAsync()
+	{
+		if (!AuthSession.IsAuthenticated)
+		{
+			NavigationManager.NavigateTo("login", replace: true);
+			return;
+		}
+
+		if (AuthSession.IsStaff)
+		{
+			NavigationManager.NavigateTo("dashboard", replace: true);
+			return;
+		}
+
+		await LoadTicketsAsync();
+	}
+
+	private async Task LoadTicketsAsync()
+	{
+		if (string.IsNullOrWhiteSpace(AuthSession.Email))
+		{
+			tickets = [];
+			return;
+		}
+
 		try
 		{
 			var client = HttpClientFactory.CreateClient("HelpDeskApi");
-			tickets = await client.GetFromJsonAsync<List<Ticket>>("api/tickets") ?? [];
+			var emailParam = Uri.EscapeDataString(AuthSession.Email);
+			tickets = await client.GetFromJsonAsync<List<Ticket>>($"api/tickets?requesterEmail={emailParam}") ?? [];
 		}
 		catch (HttpRequestException)
 		{
 			tickets = [];
 		}
+	}
+
+	private async Task HandleSignOut()
+	{
+		try
+		{
+			await JSRuntime.InvokeVoidAsync("authStorage.remove", "ithelpdesk_auth");
+		}
+		catch
+		{
+		}
+
+		AuthSession.SignOut();
+		NavigationManager.NavigateTo("login");
 	}
 }
