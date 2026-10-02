@@ -1,7 +1,7 @@
 html,
 body {
   font-family: Georgia, "Times New Roman", serif;
-  background: #f3f0e9;
+  background: #f5f2e9;
   color: #1d2925;
 }
 
@@ -47,6 +47,7 @@ a,
   gap: 2rem;
   margin-bottom: 2.5rem;
 }
+
 .eyebrow {
   color: #d45b37;
   font:
@@ -55,6 +56,7 @@ a,
   letter-spacing: 0.12em;
   margin: 0 0 0.6rem;
 }
+
 h1 {
   font-size: clamp(2.2rem, 5vw, 4.6rem);
   line-height: 0.95;
@@ -378,7 +380,7 @@ h1:focus {
   position: relative;
   min-height: 100vh;
   background:
-    linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0)),
+    linear-gradient(to top right, rgba(3, 0, 0, 0.56), rgba(51, 19, 192, 0.24)),
     url("background.jpg") center/cover;
   color: #fffdf8;
 }
